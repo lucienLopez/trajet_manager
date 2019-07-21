@@ -20,13 +20,13 @@ class Trajet < ApplicationRecord
   validates :code, uniqueness: true, presence: true
 
   before_validation :generate_code, unless: :code
-  before_create :set_state
+  before_create :init_state
   after_save :process_state_change, if: :saved_change_to_state?
 
   private
 
-  def set_state
-    self.state ||= :created
+  def init_state
+    self.state = :created
   end
 
   def generate_code
