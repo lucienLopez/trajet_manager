@@ -60,7 +60,6 @@ class Trajet < ApplicationRecord
     queue = channel.queue(RABBITMQ_QUEUE, durable: true, auto_delete: false)
     x = channel.default_exchange
 
-    puts "x: #{x.inspect}"
     x.publish(message, routing_key: queue.name)
 
     conn.close
