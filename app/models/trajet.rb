@@ -15,6 +15,8 @@
 
 
 class Trajet < ApplicationRecord
+  RABBITMQ_QUEUE = 'trajet_state_update'
+
   enum state: {created: 0, started: 1, cancelled: 2}
 
   validates :code, uniqueness: true, presence: true
@@ -44,7 +46,23 @@ class Trajet < ApplicationRecord
     end
 
     if state_before_last_save
-      puts "Trajet #{self.id}: state changed from #{state_before_last_save} to #{state}"
+      message = "Trajet #{self.id}: state changed from #{state_before_last_save} to #{state}"
+      puts message
+      send_rabbit_message(message)
     end
+  end
+
+  def send_rabbit_message(message)
+    conn = Bunny.new(host: 'rabbitmq')
+    conn.start
+
+    channel = conn.create_channel
+    queue = channel.queue(RABBITMQ_QUEUE, durable: true, auto_delete: false)
+    x = channel.default_exchange
+
+    puts "x: #{x.inspect}"
+    x.publish(message, routing_key: queue.name)
+
+    conn.close
   end
 end
