@@ -47,30 +47,37 @@ RSpec.describe Trajet, type: :model do
       it 'calls Billing.bill and puts no log' do
         expect(Billing).to receive(:bill)
         expect(STDOUT).not_to receive(:puts)
+        expect_any_instance_of(Bunny::Exchange).not_to receive(:puts)
 
         Trajet.create
       end
     end
 
     context 'when trajet is getting started' do
-      it 'calls Billing.pay and puts change' do
+      it 'calls Billing.pay and sends change messages' do
         trajet = Trajet.create
         expected_log = "Trajet #{trajet.id}: state changed from created to started"
 
         expect(Billing).to receive(:pay)
         expect(STDOUT).to receive(:puts).with(expected_log)
+        expect_any_instance_of(Bunny::Exchange).to(
+          receive(:publish).with(expected_log, {routing_key: Trajet::RABBITMQ_QUEUE})
+        )
 
         trajet.update(state: :started)
       end
     end
 
     context 'when trajet is getting cancelled' do
-      it 'calls Billing.reimburse and puts change' do
+      it 'calls Billing.reimburse and sends change messages' do
         trajet = Trajet.create
         expected_log = "Trajet #{trajet.id}: state changed from created to cancelled"
 
         expect(Billing).to receive(:reimburse)
         expect(STDOUT).to receive(:puts).with(expected_log)
+        expect_any_instance_of(Bunny::Exchange).to(
+          receive(:publish).with(expected_log, {routing_key: Trajet::RABBITMQ_QUEUE})
+        )
 
         trajet.update(state: :cancelled)
       end
